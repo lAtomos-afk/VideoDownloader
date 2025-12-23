@@ -13,12 +13,14 @@ A modern, open-source video and audio downloader for YouTube and other platforms
 ## Screenshots
 
 ### 🌑 Dark Mode
-<img src="https://github.com/user-attachments/assets/f4f32602-69cc-4337-866b-32a868b5f6cd" width="800">
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c24b79ec-dc80-4d50-bc1f-66cf611ee67d" />
+
 
 <br>
 
 ### ☀️ Light Mode
-<img src="https://github.com/user-attachments/assets/0a972a5a-b9ed-4427-acf0-09b76641a9c0" width="800">
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/3e974758-07ac-4f69-8902-dce7ad0be2e8" />
 
+---
 ## Download
 Go to the [Releases](https://github.com/lAtomos-afk/VideoDownloader/releases) page to download the latest installer.
