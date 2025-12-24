@@ -9,6 +9,7 @@ import shutil
 import json
 import re
 import webbrowser
+import requests
 from datetime import datetime
 
 ctk.set_default_color_theme("green")
@@ -19,7 +20,11 @@ class WindowsVideoDownloader:
         self.root.geometry("900x750")
         self.root.minsize(900, 600)
         self.root.resizable(True, True)
-        self.root.title("Video Downloader v3.0")
+        self.root.title("Video Downloader")
+        
+        self.CURRENT_VERSION = "3.5"
+        self.REPO_URL = "https://github.com/lAtomos-afk/VideoDownloader"
+        self.API_RELEASE_URL = "https://api.github.com/repos/lAtomos-afk/VideoDownloader/releases/latest"
         
         self.color_bg = ("#F2F2F2", "#000000")
         self.color_panel = ("#FFFFFF", "#111111")
@@ -30,6 +35,9 @@ class WindowsVideoDownloader:
         self.color_accent = "#2ecc71"       
         self.color_accent_hover = "#27ae60" 
 
+        # Nota: Mantenemos la estructura de carpetas que tenías, aunque en Linux 
+        # lo estándar sería ~/.config/VideoDownloader. 
+        # Si prefieres cambiarlo, avísame.
         self.home_dir = os.path.expanduser("~")
         self.config_dir = os.path.join(self.home_dir, "AppData", "Local", "VideoDownloader")
         
@@ -59,7 +67,7 @@ class WindowsVideoDownloader:
         self.textos_dict = {
             "es": {
                 "title": "Video Downloader",
-                "subtitle": "v3.0",
+                "subtitle": f"v{self.CURRENT_VERSION}",
                 "save_in": "Guardar en:",
                 "browse": "Examinar",
                 "config_group": "Configuración de Descarga",
@@ -81,10 +89,11 @@ class WindowsVideoDownloader:
                 "col_name": "Nombre",
                 "col_format": "Formato",
                 "aviso_title": "Aviso Importante",
-                "aviso_body": "¡Bienvenido a la v3.0!\n\nSi compartes esta herramienta,\nrecuerda dar créditos a: SirAtomos.",
+                "aviso_body": f"¡Bienvenido a la v{self.CURRENT_VERSION}!\n\nSi compartes esta herramienta,\nrecuerda dar créditos a: SirAtomos.",
                 "chk_nomore": "No mostrar de nuevo",
                 "btn_ok": "Entendido",
-                "error_ffmpeg": "FFmpeg no encontrado.\n\nPara instalarlo, abre PowerShell como Admin y ejecuta:\nwinget install ffmpeg\n\nO descárgalo manualmente de gyan.dev",
+                # Mensaje genérico para Linux
+                "error_ffmpeg": "FFmpeg no encontrado en el sistema.\nEl audio no se podrá convertir a MP3.\n(Instálalo con tu gestor de paquetes)",
                 "lbl_lang": "Idioma / Language",
                 "lbl_theme": "Apariencia / Appearance",
                 "switch_dark": "Modo Oscuro",
@@ -92,11 +101,17 @@ class WindowsVideoDownloader:
                 "alert_playlist_title": "Playlist Detectada",
                 "alert_playlist_msg": "Este enlace es una Playlist o Radio.\nSe descargarán MÚLTIPLES videos.\n\n¿Estás seguro de continuar?",
                 "about_title": "Sobre el Creador",
-                "about_desc": "Desarrollado con ❤️ por SirAtomos.\n¡Sígueme en mis redes!"
+                "about_desc": "Desarrollado con Amor por SirAtomos.\n¡Visita mi perfil!",
+                "btn_carrd": "Mis Redes / Contacto",
+                "lbl_update": "Actualizaciones",
+                "btn_check_update": "Buscar Actualización",
+                "msg_uptodate": "Estás en la última versión",
+                "msg_newversion": "¡Nueva versión disponible!",
+                "msg_neterror": "Error de conexión"
             },
             "en": {
                 "title": "Video Downloader",
-                "subtitle": "v3.0",
+                "subtitle": f"v{self.CURRENT_VERSION}",
                 "save_in": "Save to:",
                 "browse": "Browse",
                 "config_group": "Download Settings",
@@ -118,10 +133,10 @@ class WindowsVideoDownloader:
                 "col_name": "Name",
                 "col_format": "Format",
                 "aviso_title": "Important Notice",
-                "aviso_body": "Welcome to v3.0!\n\nIf you share this tool, please\ncredit the creator: SirAtomos.",
+                "aviso_body": f"Welcome to v{self.CURRENT_VERSION}!\n\nIf you share this tool, please\ncredit the creator: SirAtomos.",
                 "chk_nomore": "Don't show again",
                 "btn_ok": "Got it",
-                "error_ffmpeg": "FFmpeg not found.\n\nTo install, open PowerShell as Admin and run:\nwinget install ffmpeg\n\nOr download manually from gyan.dev",
+                "error_ffmpeg": "FFmpeg not found in system.\nAudio conversion to MP3 will fail.\n(Install it via your package manager)",
                 "lbl_lang": "Language / Idioma",
                 "lbl_theme": "Appearance / Apariencia",
                 "switch_dark": "Dark Mode",
@@ -129,7 +144,13 @@ class WindowsVideoDownloader:
                 "alert_playlist_title": "Playlist Detected",
                 "alert_playlist_msg": "This link is a Playlist or Radio.\nIt will download MULTIPLE videos.\n\nDo you want to proceed?",
                 "about_title": "About the Creator",
-                "about_desc": "Developed with ❤️ by SirAtomos.\nFollow me!"
+                "about_desc": "Developed with Love by SirAtomos.\nCheck my profile!",
+                "btn_carrd": "My Socials / Contact",
+                "lbl_update": "Updates",
+                "btn_check_update": "Check for Updates",
+                "msg_uptodate": "You are up to date",
+                "msg_newversion": "New version available!",
+                "msg_neterror": "Network error"
             }
         }
 
@@ -141,8 +162,11 @@ class WindowsVideoDownloader:
         return self.textos_dict[self.config["lang"]].get(key, key)
 
     def verificar_ffmpeg(self):
+        # En Linux solo verificamos si está en el PATH
         if shutil.which("ffmpeg") is None:
-            messagebox.showwarning("Falta Dependencia", self.t("error_ffmpeg"))
+            # Puedes descomentar esto si quieres que avise al iniciar
+            # messagebox.showwarning("Falta Dependencia", self.t("error_ffmpeg"))
+            pass
 
     def cargar_configuracion(self):
         if os.path.exists(self.settings_file):
@@ -350,9 +374,12 @@ class WindowsVideoDownloader:
 
     def procesar_lista(self, rows, config):
         carpeta_final = self.ruta_destino.get()
+        # En Linux confiamos en que ffmpeg esté en el PATH
+        ffmpeg_path = shutil.which("ffmpeg")
+
         opciones = {
             'outtmpl': os.path.join(carpeta_final, '%(title)s.%(ext)s'),
-            'ffmpeg_location': shutil.which("ffmpeg"),
+            'ffmpeg_location': ffmpeg_path,
             'quiet': True,
             'no_warnings': True,
             'progress_hooks': [self.hook_progreso],
@@ -433,9 +460,39 @@ class WindowsVideoDownloader:
         btn = ctk.CTkButton(win, text=self.t("btn_clear"), command=limpiar, fg_color="#c0392b", hover_color="#e74c3c", text_color="white")
         btn.pack(pady=10)
 
+    def parse_version(self, v_str):
+        try:
+            return [int(x) for x in v_str.lower().replace("v", "").split(".")]
+        except:
+            return [0]
+
+    def verificar_actualizaciones(self, btn_widget, lbl_status):
+        btn_widget.configure(state="disabled", text="Checking...")
+        try:
+            r = requests.get(self.API_RELEASE_URL, timeout=5)
+            if r.status_code == 200:
+                data = r.json()
+                latest_tag = data.get("tag_name", self.CURRENT_VERSION)
+                
+                v_local = self.parse_version(self.CURRENT_VERSION)
+                v_remote = self.parse_version(latest_tag)
+                
+                if v_remote > v_local:
+                    lbl_status.configure(text=f"{self.t('msg_newversion')} ({latest_tag})", text_color=self.color_accent)
+                    btn_widget.configure(state="normal", text="Descargar / Download", command=lambda: webbrowser.open(f"{self.REPO_URL}/releases/latest"))
+                else:
+                    lbl_status.configure(text=self.t("msg_uptodate"), text_color="gray")
+                    btn_widget.configure(state="normal", text=self.t("btn_check_update"))
+            else:
+                lbl_status.configure(text="Error checking GitHub", text_color="red")
+                btn_widget.configure(state="normal", text=self.t("btn_check_update"))
+        except:
+            lbl_status.configure(text=self.t("msg_neterror"), text_color="red")
+            btn_widget.configure(state="normal", text=self.t("btn_check_update"))
+
     def abrir_configuracion(self):
         win = ctk.CTkToplevel(self.root)
-        win.geometry("300x300") 
+        win.geometry("350x450") 
         win.title(self.t("settings"))
         win.transient(self.root)
         win.configure(fg_color=self.color_bg)
@@ -454,11 +511,21 @@ class WindowsVideoDownloader:
 
         switch_theme = ctk.CTkSwitch(win, text=self.t("switch_dark"), command=cambiar_tema_visual, progress_color=self.color_accent, text_color=self.color_text)
         switch_theme.pack(pady=5)
-        
         if self.config.get("theme_mode") == "Dark":
             switch_theme.select()
         else:
             switch_theme.deselect()
+        
+        ctk.CTkFrame(win, height=2, fg_color="gray50").pack(fill="x", padx=20, pady=20)
+        
+        ctk.CTkLabel(win, text=self.t("lbl_update"), font=ctk.CTkFont(weight="bold"), text_color=self.color_text).pack(pady=(0, 5))
+        
+        lbl_upd_status = ctk.CTkLabel(win, text="", font=ctk.CTkFont(size=12))
+        lbl_upd_status.pack(pady=5)
+
+        btn_check = ctk.CTkButton(win, text=self.t("btn_check_update"), fg_color="transparent", border_width=1, border_color="gray", text_color=self.color_text)
+        btn_check.pack(pady=5)
+        btn_check.configure(command=lambda: threading.Thread(target=self.verificar_actualizaciones, args=(btn_check, lbl_upd_status), daemon=True).start())
 
         def save():
             self.config["lang"] = "es" if combo_lang.get() == "Español" else "en"
@@ -471,7 +538,7 @@ class WindowsVideoDownloader:
 
     def abrir_sobre_mi(self):
         win = ctk.CTkToplevel(self.root)
-        win.geometry("300x350")
+        win.geometry("300x300")
         win.title(self.t("about"))
         win.transient(self.root)
         win.configure(fg_color=self.color_bg)
@@ -480,24 +547,14 @@ class WindowsVideoDownloader:
         
         ctk.CTkLabel(win, text=self.t("about_desc"), text_color="gray").pack(pady=(0, 20))
 
-        link_github = "https://github.com/lAtomos-afk"
-        link_discord = "https://discord.com/invite/gQhAt4uqKG"
-        link_youtube = "https://www.youtube.com/@SirAtomos"
+        link_carrd = "https://siratomos.carrd.co/"
 
         def abrir(url):
             webbrowser.open(url)
 
-        btn_gh = ctk.CTkButton(win, text="GitHub", command=lambda: abrir(link_github),
-                               fg_color="#333", hover_color="#24292e", width=200)
-        btn_gh.pack(pady=5)
-
-        btn_ds = ctk.CTkButton(win, text="Discord", command=lambda: abrir(link_discord),
-                               fg_color="#5865F2", hover_color="#4752C4", width=200)
-        btn_ds.pack(pady=5)
-
-        btn_yt = ctk.CTkButton(win, text="YouTube", command=lambda: abrir(link_youtube),
-                               fg_color="#FF0000", hover_color="#CC0000", width=200)
-        btn_yt.pack(pady=5)
+        btn_carrd = ctk.CTkButton(win, text=self.t("btn_carrd"), command=lambda: abrir(link_carrd),
+                               fg_color=self.color_accent, hover_color=self.color_accent_hover, width=200)
+        btn_carrd.pack(pady=10)
 
         ctk.CTkButton(win, text="Cerrar", command=win.destroy, fg_color="transparent", border_width=1, border_color="gray", text_color=self.color_text, width=100).pack(side="bottom", pady=20)
 
